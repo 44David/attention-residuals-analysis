@@ -1,0 +1,7 @@
+[project]
+name = "attention-residuals-analysis"
+version = "0.1.0"
+description = "Analysis of the effects of attention residuals on the optimization space and more "
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
