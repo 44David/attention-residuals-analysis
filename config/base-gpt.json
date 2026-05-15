@@ -1,0 +1,10 @@
+{
+    "wandb":"true", 
+    "batch_size":64,
+    "block_size":256,
+    "n_layer":6,
+    "n_head":6,
+    "d_model":384,
+    "lr":1e-3,
+    "lr_decay":"true"
+}
