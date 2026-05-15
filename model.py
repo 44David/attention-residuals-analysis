@@ -96,3 +96,41 @@ class Model(nn.Module):
 
 
         return logits, loss
+
+
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+
+        self.n_head = config.n_head
+        self.d_model = config.d_model
+        self.dropout = config.dropout
+        self.bias = config.bias
+    
+        
+        self.c_attention = nn.Linear(self.d_model, 3 * self.d_model, bias=self.bias)
+        self.c_proj = nn.Linear(self.d_model, self.d_model, bias=self.bias)
+        
+        self.attention_dropout = nn.Dropout(self.dropout)
+        self.residual_dropout = nn.Dropout(self.dropout)
+
+        self.flash_attn = hasattr(torch.nn.functional, 'scaled_dot_product_attention')
+        if not self.flash_attn:
+            raise RuntimeError("Error, flash attention not found in pytorch version. Stopping.")
+        
+    
+    def forward(self, x):
+        batch_size, seq_len, d_model = x.size()
+        
+        q, k, v = self.c_attention(x).split(self.d_model, dim=2)
+        q = q.view(batch_size, seq_len, self.n_head, d_model//self.n_head).transpose(1, 2)
+        k = k.view(batch_size, seq_len, self.n_head, d_model//self.n_head).transpose(1, 2) 
+        v = v.view(batch_size, seq_len, self.n_head, d_model//self.n_head).transpose(1, 2) 
+        
+        # using flash attn 
+        y = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=self.dropout if self.training else 0, is_causal=True)
+        y = y.transpose(1, 2).contiguous().view(batch_size, seq_len, d_model)
+        
+        y = self.residual_dropout(self.c_proj(y))
+        return y
