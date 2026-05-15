@@ -5,8 +5,16 @@
     "n_layer":6,
     "n_head":6,
     "d_model":384,
-    "lr":1e-3,
+    "lr":6e-4,
     "lr_decay":"true",
     "dropout":0.2,
-    "_comment":"vocab_size to be added when dataset is loaded"
+    "_comment":"vocab_size to be added when dataset is loaded",
+    "beta1": 0.9,
+    "beta2": 0.95,
+    "weight_decay": 1e-1,
+    "grad_clip": 1.0,
+    "decay_lr": "true",
+    "min_lr": 6e-5,
+    "gradient_accumulation_steps": 40,
+    "dataset": "openwebtext"
 }
