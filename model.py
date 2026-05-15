@@ -5,7 +5,6 @@ from torch.nn import functional as F
 import json
 
 
-
 class DecoderBlock(nn.Module):
     def __init__(self, config):
         self.d_model = config.d_model
@@ -14,8 +13,8 @@ class DecoderBlock(nn.Module):
         self.ln2 = F.layer_norm(self.d_model)
         
         self.attention = MultiHeadAttention(d_model=self.d_model)
-        self.network = MLP(config)
-        
+        self.network = Network(config)
+
         
     def forward(self, x):
         x = x + self.attention(self.ln1(x))
@@ -134,3 +133,25 @@ class MultiHeadAttention(nn.Module):
         
         y = self.residual_dropout(self.c_proj(y))
         return y
+    
+    
+class Network(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        
+        self.d_model = config.d_model
+        self.bias = config.bias
+        self.dropout = config.dropout
+        
+        self.fc = nn.Linear(self.d_model, 4*self.d_model, bias=self.bias)
+        self.gelu = nn.GELU()
+        self.proj = nn.Linear(4 * self.d_model, self.d_model, bias=self.bias)
+        self.dropout_reg = nn.Dropout(self.dropout)
+        
+    def forward(self, x):
+        x = self.fc(x)
+        x = self.gelu(x)
+        x = self.proj(x)
+        x = self.dropout_reg(x)
+        
+        return x
