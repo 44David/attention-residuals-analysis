@@ -3,16 +3,25 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 import json
+from types import SimpleNamespace
+
+# open config file
+with open("config.json") as f:
+    config_dict = json.load(f)
+    
+config = SimpleNamespace(**config_dict)
 
 
 class DecoderBlock(nn.Module):
     def __init__(self, config):
+        super().__init__()
+        
         self.d_model = config.d_model
         
-        self.ln1 = F.layer_norm(self.d_model)
-        self.ln2 = F.layer_norm(self.d_model)
+        self.ln1 = nn.LayerNorm(self.d_model)
+        self.ln2 = nn.LayerNorm(self.d_model)
         
-        self.attention = MultiHeadAttention(d_model=self.d_model)
+        self.attention = MultiHeadAttention(config)
         self.network = Network(config)
 
         
@@ -25,6 +34,8 @@ class DecoderBlock(nn.Module):
     
 class Model(nn.Module):
     def __init__(self, config):
+        super().__init__()
+        
         self.d_model = config.d_model
         self.vocab_size = config.vocab_size
         self.block_size = config.block_size
@@ -36,7 +47,7 @@ class Model(nn.Module):
             wpe = nn.Embedding(self.block_size, self.d_model),
             dropout = nn.Dropout(self.dropout), 
             hidden = nn.ModuleList([DecoderBlock(config) for _ in range(self.n_layer)]),
-            ln_final = F.layer_norm(self.d_model)
+            ln_final = nn.LayerNorm(self.d_model)
         ))
         
         self.lm_head = nn.Linear(self.d_model, self.vocab_size, bias=False) 
@@ -79,10 +90,10 @@ class Model(nn.Module):
         tok_emb = self.gpt.wte(idx)
         pos_emb = self.gpt.wpe(pos)
         
-        x = self.gpt.drop(tok_emb + pos_emb)
+        x = self.gpt.dropout(tok_emb + pos_emb)
         
         for block in self.gpt.hidden:
-            x = DecoderBlock(x)
+            x = block(x)
             
         x = self.gpt.ln_final(x)
         
@@ -107,6 +118,7 @@ class MultiHeadAttention(nn.Module):
         self.dropout = config.dropout
         self.bias = config.bias
     
+        assert self.d_model % self.n_head == 0
         
         self.c_attention = nn.Linear(self.d_model, 3 * self.d_model, bias=self.bias)
         self.c_proj = nn.Linear(self.d_model, self.d_model, bias=self.bias)
@@ -145,13 +157,13 @@ class Network(nn.Module):
         
         self.fc = nn.Linear(self.d_model, 4*self.d_model, bias=self.bias)
         self.gelu = nn.GELU()
-        self.proj = nn.Linear(4 * self.d_model, self.d_model, bias=self.bias)
+        self.c_proj = nn.Linear(4 * self.d_model, self.d_model, bias=self.bias)
         self.dropout_reg = nn.Dropout(self.dropout)
         
     def forward(self, x):
         x = self.fc(x)
         x = self.gelu(x)
-        x = self.proj(x)
+        x = self.c_proj(x)
         x = self.dropout_reg(x)
         
         return x

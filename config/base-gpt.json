@@ -6,5 +6,7 @@
     "n_head":6,
     "d_model":384,
     "lr":1e-3,
-    "lr_decay":"true"
+    "lr_decay":"true",
+    "dropout":0.2,
+    "_comment":"vocab_size to be added when dataset is loaded"
 }
